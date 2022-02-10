@@ -3,9 +3,9 @@ This repository contains the code of all assignments for the course.
 ---
 
 ## Table of contents
-- [Prerequisites](#pre-reqs)
-- [Build & Deploy Instructions](#build)
-- [Testing](#test)
+  - [Prerequisites](#prerequisites)
+  - [Build & Deploy Instructions](#build--deploy-instructions)
+  - [Testing](#testing)
 ## Prerequisites
 * **node** should be installed. Preferred version 16.13.2. 
 If you do not have node installed, kindly visit [node.org](https://nodejs.org/en/) to install it.
