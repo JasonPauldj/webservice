@@ -9,7 +9,7 @@ async function create(params) {
                 username: params.username
             }
         })) {
-        throw 'Username "' + params.username + '" is already taken';
+        throw 'Username is already taken';
     }
 
     params.password = await bcrypt.hash(params.password, 10);
@@ -37,13 +37,6 @@ async function create(params) {
 
 
 async function getUserByUserName(givenUserName) {
-    // let {
-    //     dataValues: user
-    // } = await db.User.findOne({
-    //     where: {
-    //         username: givenUserName
-    //     }
-    // });
 
     let user =await db.User.findOne({
         where: {
@@ -51,13 +44,8 @@ async function getUserByUserName(givenUserName) {
         }
     });
 
-    if (!user) {
-        throw 'Username "' + givenUserName + '" is does not exist';
-    }
-
     return user;
 
-    // const {id,first_name,last_name,username,account_created,account_updated} = await db.User.findOne({where : {username : givenUserName}});
 }
 
 
