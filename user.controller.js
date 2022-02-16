@@ -62,7 +62,8 @@ userRouter.route('/').post((req, res, next) => {
         user.set({
             first_name : req.body.first_name,
             last_name : req.body.last_name,
-            password : await bcrypt.hash(req.body.password, 10)
+            password : await bcrypt.hash(req.body.password, 10),
+            account_updated : new Date()
         });
 
         return await user.save();
