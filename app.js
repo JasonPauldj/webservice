@@ -1,9 +1,14 @@
 
 const express = require('express');
-const app = express();
+const userRouter = require('./user.controller');
 const db = require('./db.js');
 
+
+const app = express();
+
 app.use(express.json());
+
+app.use('/v1/user',userRouter);
 
 app.get('/healthz', (req,res) => {
     res.sendStatus(200)
