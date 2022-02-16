@@ -38,8 +38,9 @@ post((req, res, next) => {
             res.sendStatus(400);
 
         })
-    }).
-put((req, res, next) => {
+    });
+
+userRouter.route('/self').put((req, res, next) => {
 
     //checking for authorization header
     let authHeader = req.headers.authorization;
