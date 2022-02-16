@@ -4,24 +4,72 @@ const db = require('./db');
 
 async function create(params) {
 
-    if (await db.User.findOne({ where: { username: params.username } })) {
+    if (await db.User.findOne({
+            where: {
+                username: params.username
+            }
+        })) {
         throw 'Username "' + params.username + '" is already taken';
     }
 
     params.password = await bcrypt.hash(params.password, 10);
 
-    const {id,first_name,last_name,username,account_created,account_updated} = await db.User.create(params);
+    const {
+        id,
+        first_name,
+        last_name,
+        username,
+        account_created,
+        account_updated
+    } = await db.User.create(params);
 
-    const user ={
-        id : id,
-        first_name:first_name,
-        last_name:last_name,
-        username:username,
-        account_created:account_created,
-        account_updated:account_updated
+    const user = {
+        id: id,
+        first_name: first_name,
+        last_name: last_name,
+        username: username,
+        account_created: account_created,
+        account_updated: account_updated
     }
 
     return user;
 }
 
-module.exports = {create}
+
+async function getUserByUserName(givenUserName) {
+    // let {
+    //     dataValues: user
+    // } = await db.User.findOne({
+    //     where: {
+    //         username: givenUserName
+    //     }
+    // });
+
+    let user =await db.User.findOne({
+        where: {
+            username: givenUserName
+        }
+    });
+
+    if (!user) {
+        throw 'Username "' + givenUserName + '" is does not exist';
+    }
+
+    return user;
+
+    // const {id,first_name,last_name,username,account_created,account_updated} = await db.User.findOne({where : {username : givenUserName}});
+}
+
+
+// async function updateUserById(givenId){
+//     let {
+//         dataValues : user
+//     } = await db.User.findOne({
+//         where : 
+//     })
+// }
+
+module.exports = {
+    create,
+    getUserByUserName
+}
