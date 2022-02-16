@@ -61,15 +61,13 @@ async function getUserByUserName(givenUserName) {
 }
 
 
-// async function updateUserById(givenId){
-//     let {
-//         dataValues : user
-//     } = await db.User.findOne({
-//         where : 
-//     })
-// }
+async function updateUserByModelInstance(user,params){
+    user.set(params);
+   return await user.save();
+}
 
 module.exports = {
     create,
-    getUserByUserName
+    getUserByUserName,
+    updateUserByModelInstance
 }

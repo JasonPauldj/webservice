@@ -53,33 +53,59 @@ userRouter.route('/self').put((req, res, next) => {
     var credentials = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
 
     userService.getUserByUserName(credentials[0]).then(async (user) => {
-        console.log(user);
+        // console.log(user);
 
         //verifying password
         if (!(await bcrypt.compare(credentials[1], user.dataValues.password))) {
             console.log("password incorrect");
             throw ('you are not authorized');
         }
-        return user;
-    }).then(async (user) => {
-        user.set({
-            first_name: req.body.first_name,
-            last_name: req.body.last_name,
-            password: await bcrypt.hash(req.body.password, 10),
-            account_updated: new Date()
-        });
 
-        return await user.save();
-    }).then((user) => {
-        console.log("final user " + user);
-        res.sendStatus(204);
-    }).catch((e) => {
-        console.log(e);
+        req.user = user;
+        next();
+        // return user;
+    }).catch(err => {
         res.setHeader('WWW-Authenticate', 'Basic');
         res.sendStatus(401);
-        return;
     })
+    // .then(async (user) => {
+    //     user.set({
+    //         first_name: req.body.first_name,
+    //         last_name: req.body.last_name,
+    //         password: await bcrypt.hash(req.body.password, 10),
+    //         account_updated: new Date()
+    //     });
 
+    //     return await user.save();
+    // }).then((user) => {
+    //     console.log("final user " + user);
+    //     res.sendStatus(204);
+    // }).catch((e) => {
+    //     console.log(e);
+    //     res.setHeader('WWW-Authenticate', 'Basic');
+    //     res.sendStatus(401);
+    //     return;
+    // })
+
+}, async (req, res) => {
+    userService.updateUserByModelInstance(req.user, {
+        first_name: req.body.first_name,
+        last_name: req.body.last_name,
+        password: await bcrypt.hash(req.body.password, 10),
+        account_updated: new Date()
+    }).then((user) => {
+        res.sendStatus(204)
+    }).catch((err) => {
+        console.log("error in put " + err);
+    })
+    // req.user.set({
+    //     first_name: req.body.first_name,
+    //     last_name: req.body.last_name,
+    //     password: await bcrypt.hash(req.body.password, 10),
+    //     account_updated: new Date()
+    // });
+
+    //    await req.user.save();
 }).
 get((req, res) => {
     //checking for authorization header
@@ -130,8 +156,6 @@ function validateRequest(req, res, next, schema) {
     }
 }
 
-async function verifyPassword(givenPassword, hashedPassword) {
-    return await bcrypt(givenPassword, hashedPassword);
-}
+
 
 module.exports = userRouter;
