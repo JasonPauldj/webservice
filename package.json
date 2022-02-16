@@ -4,8 +4,8 @@
   "description": "This npm project is for the CSYE6225 course.",
   "main": "server.js",
   "scripts": {
-    "start":"node server.js",
-   "test": "jest"
+    "start": "node server.js",
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -18,7 +18,11 @@
   },
   "homepage": "https://github.com/jasonpaulneu/webservice#readme",
   "dependencies": {
-    "express": "^4.17.2"
+    "bcryptjs": "^2.4.3",
+    "express": "^4.17.2",
+    "joi": "^17.6.0",
+    "mysql2": "^2.3.3",
+    "sequelize": "^6.16.1"
   },
   "devDependencies": {
     "jest": "^27.5.1",
