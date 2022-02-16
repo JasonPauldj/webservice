@@ -8,7 +8,8 @@ const userRouter = express.Router();
 
 
 
-userRouter.route('/').post((req, res, next) => {
+userRouter.route('/').
+post((req, res, next) => {
         const schema = Joi.object({
             first_name: Joi.string().required(),
             last_name: Joi.string().required(),
@@ -37,7 +38,8 @@ userRouter.route('/').post((req, res, next) => {
             res.sendStatus(400);
 
         })
-    }).put((req, res, next) => {
+    }).
+put((req, res, next) => {
 
     //checking for authorization header
     let authHeader = req.headers.authorization;
@@ -58,16 +60,16 @@ userRouter.route('/').post((req, res, next) => {
             throw ('you are not authorized');
         }
         return user;
-    }).then(async (user)=>{
+    }).then(async (user) => {
         user.set({
-            first_name : req.body.first_name,
-            last_name : req.body.last_name,
-            password : await bcrypt.hash(req.body.password, 10),
-            account_updated : new Date()
+            first_name: req.body.first_name,
+            last_name: req.body.last_name,
+            password: await bcrypt.hash(req.body.password, 10),
+            account_updated: new Date()
         });
 
         return await user.save();
-    }).then((user)=>{
+    }).then((user) => {
         console.log("final user " + user);
         res.sendStatus(204);
     }).catch((e) => {
@@ -77,6 +79,35 @@ userRouter.route('/').post((req, res, next) => {
         return;
     })
 
+}).
+get((req, res) => {
+    //checking for authorization header
+    let authHeader = req.headers.authorization;
+    if (!authHeader) {
+        res.setHeader('WWW-Authenticate', 'Basic');
+        res.sendStatus(401);
+        return;
+    }
+
+    var credentials = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+
+    userService.getUserByUserName(credentials[0]).then(async (user) => {
+        console.log(user);
+
+        //verifying password
+        if (!(await bcrypt.compare(credentials[1], user.dataValues.password))) {
+            console.log("password incorrect");
+            throw ('you are not authorized');
+        }
+        const {
+            createdAt,
+            updatedAt,
+            password,
+            ...userInfo
+        } = user.dataValues;
+        res.status(200);
+        res.json(userInfo);
+    })
 })
 
 function validateRequest(req, res, next, schema) {
