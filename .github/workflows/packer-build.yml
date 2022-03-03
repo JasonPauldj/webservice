@@ -15,7 +15,7 @@ jobs:
       - run: zip -r webservice.zip ./
 
 
-      # Initialize Packer templates
+      # Initialize Packer template
       - name: Initialize Packer Template
         uses: hashicorp/packer-github-actions@master
         with:
@@ -23,7 +23,7 @@ jobs:
           arguments: -var=aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }} -var=aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }} -var-file=dev-vars.pkrvars.json
           target: ami.pkr.hcl
 
-      # Build Packer templates
+      # Build Packer template
       - name: Build Artifact
         uses: hashicorp/packer-github-actions@master
         with:

@@ -1,12 +1,9 @@
 ---
 name: Packer Validate on Pull Requests
 
-# Controls when the action will run.
-# Triggers the workflow on pull request events but only for the main branch
 on:
-  # Workflow is triggered on pull requests
+  # Workflow will only be triggered for pull requests on "main" branch
   pull_request:
-    # Workflow will only be triggered for pull requests on "main" branch
     branches: [ main ]
 
 jobs:
@@ -18,8 +15,6 @@ jobs:
       uses: actions/checkout@v2
 
     - run: zip -r webservice.zip ./
-    - run: pwd
-    - run: ls
 
       # Initialize Packer templates
     - name: Initialize Packer Template
