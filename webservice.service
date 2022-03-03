@@ -3,8 +3,8 @@ Description=Webservice App
 After=cloud-final.service
 
 [Service]
-WorkingDirectory=/home/ec2-user/webservice
-ExecStart=/usr/bin/node /home/ec2-user/webservice/server.js
+WorkingDirectory=/home/ec2-user/app
+ExecStart=/usr/bin/node /home/ec2-user/app/server.js
 Restart=always
 RestartSec=10
 StandardOutput=syslog

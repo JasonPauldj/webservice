@@ -28,8 +28,9 @@ sudo yum install -y nodejs
 
 #unzipping webservice
 sudo yum install unzip -y
-cd ~/ && unzip webservice.zip
-cd ~/webservice && npm i --only=prod
+cd ~/ && mkdir app
+cd ~/ && unzip webservice.zip -d ~/app
+cd ~/app && npm i --only=prod
 
 #moving files
 sudo mv /tmp/webservice.service /etc/systemd/system/webservice.service
