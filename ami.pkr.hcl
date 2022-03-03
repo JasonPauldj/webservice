@@ -55,17 +55,17 @@ build {
   sources = ["source.amazon-ebs.ec2-user"]
 
   provisioner "file" {
-    source = "../webservice.zip"
+    source = "./webservice.zip"
     destination = "/home/ec2-user/webservice.zip"
   }
 
   provisioner "file" {
-    source = "./packer/webservice.service"
+    source = "./webservice.service"
     destination = "/tmp/webservice.service"
   }
 
   provisioner "shell" {
-    script = "./packer/app.sh"
+    script = "./app.sh"
   }
  
 
