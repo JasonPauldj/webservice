@@ -15,6 +15,12 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v2
       - run: zip -r webservice.zip ./
+          # Initialize Packer templates
+      - name: Initialize Packer Template
+        uses: hashicorp/packer-github-actions@master
+        with:
+          command: init
+          target: ami.pkr.hcl
       - name: Build Artifact
         uses: hashicorp/packer-github-actions@master
         with:
