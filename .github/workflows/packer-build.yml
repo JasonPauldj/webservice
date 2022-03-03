@@ -1,0 +1,23 @@
+name: Packer build AMI
+on: 
+  push:
+    branches : [ main ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+
+    steps:
+      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - run: zip -r webservice.zip ./
+      - name: Build Artifact
+        uses: hashicorp/packer-github-actions@master
+        with:
+           command: build
+           arguments: "-var-file=dev-vars.pkrvars.json"
+           target: ami.pkr.hcl
