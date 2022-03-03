@@ -22,7 +22,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v2
 
-    - run: zip -r webservice.zip webservice/
+    - run: zip -r webservice.zip ./
     - run: pwd
     - run: ls
 
