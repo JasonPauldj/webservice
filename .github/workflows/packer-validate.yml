@@ -22,9 +22,9 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v2
 
-    - run: cd .. && zip -r webservice.zip webservice/
-    - run: cd .. && pwd
-    - run: cd ..  && ls
+    - run: zip -r webservice.zip webservice/
+    - run: pwd
+    - run: ls
 
 
           # Initialize Packer templates
