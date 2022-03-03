@@ -20,7 +20,7 @@ jobs:
         uses: hashicorp/packer-github-actions@master
         with:
           command: init
-          arguments: -var=-var=AWS_ACCESSKEY=${{ secrets.AWS_ACCESS_KEY_ID }} -var=AWS_SECTRET_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} -var-file=dev-vars.pkrvars.json
+          arguments: -var=aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }} -var=aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }} -var-file=dev-vars.pkrvars.json
           target: ami.pkr.hcl
 
       # Build Packer templates
@@ -28,5 +28,5 @@ jobs:
         uses: hashicorp/packer-github-actions@master
         with:
            command: build
-           arguments: -var-file=dev-vars.pkrvars.json
+           arguments: -var=aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }} -var=aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }} -var-file=dev-vars.pkrvars.json
            target: ami.pkr.hcl

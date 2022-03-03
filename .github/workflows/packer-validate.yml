@@ -26,7 +26,7 @@ jobs:
       uses: hashicorp/packer-github-actions@master
       with:
           command: init
-          arguments: -var=-var=AWS_ACCESSKEY=${{ secrets.AWS_ACCESS_KEY_ID }} -var=AWS_SECTRET_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} -var-file=dev-vars.pkrvars.json
+          arguments: -var=aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }} -var=aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }} -var-file=dev-vars.pkrvars.json
           target: ami.pkr.hcl
 
     # Ref: https://github.com/marketplace/actions/packer-github-actions
@@ -34,7 +34,7 @@ jobs:
       uses: hashicorp/packer-github-actions@master
       with:
         command: validate
-        arguments: -var-file=dev-vars.pkrvars.json
+        arguments: -var=aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }} -var=aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }} -var-file=dev-vars.pkrvars.json
         target: ami.pkr.hcl
       env:
         PACKER_LOG: 1 # enable debug log for packer
