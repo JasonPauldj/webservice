@@ -2,7 +2,6 @@
 const express = require('express');
 const userRouter = require('./user.controller');
 
-
 const app = express();
 
 app.use(express.json());

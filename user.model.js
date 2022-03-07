@@ -11,7 +11,10 @@ function model(sequelize) {
         username: { type: DataTypes.STRING, allowNull: false },
         account_created : {type: DataTypes.DATE,allowNull:true},
         account_updated : {type: DataTypes.DATE,allowNull:true},
-        id : {type : DataTypes.UUID,defaultValue:Sequelize.UUIDV4,allowNull:false,primaryKey:true}
+        id : {type : DataTypes.UUID,defaultValue:Sequelize.UUIDV4,allowNull:false,primaryKey:true},
+        url : {type : DataTypes.STRING, allowNull:true},
+        upload_date :{type: DataTypes.STRING, allowNull:true},
+        file_name : {type: DataTypes.STRING, allowNull:true}
     };
 
     const options = {

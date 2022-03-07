@@ -4,6 +4,7 @@ After=cloud-final.service
 
 [Service]
 WorkingDirectory=/home/ec2-user/app
+EnvironmentFile=/etc/systemd/system/db.env
 ExecStart=/usr/bin/node /home/ec2-user/app/server.js
 Restart=always
 RestartSec=10

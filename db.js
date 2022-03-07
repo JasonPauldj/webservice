@@ -1,6 +1,15 @@
+require('dotenv').config();
 const config = require('./config.json');
 const mysql = require('mysql2/promise');
 const { Sequelize } = require('sequelize');
+
+const dbconfig ={
+    host : process.env.MYSQL_HOST,
+    port : 3306,
+    user : process.env.MYSQL_USER,
+    password : process.env.MYSQL_PASSWORD,
+    database : process.env.MYSQL_DATABASE
+}
 
 module.exports = db = {};
 
@@ -10,13 +19,17 @@ async function initialize() {
 
     console.log("initializing connection to DB");
 
-    const { host, port, user, password, database } = config.database;
+    //const { host, port, user, password, database } = config.database;
+    const { host, port, user, password, database } = dbconfig;
     const connection = await mysql.createConnection({ host, port, user, password });
     await connection.query(`CREATE DATABASE IF NOT EXISTS \`${database}\`;`);
 
-    const sequelize = new Sequelize(database, user, password, { dialect: 'mysql' });
+   // const sequelize = new Sequelize(database, user, password, { dialect: 'mysql' });
+    const sequelize = new Sequelize(database, user, password,  {host: host,port: port ,dialect: 'mysql', dialectOptions: {
+        ssl:'Amazon RDS'
+    } });
+
 
     db.User = require('./user.model.js')(sequelize);
-
-    await sequelize.sync();
+    await sequelize.sync({ alter: true });
 }
