@@ -34,5 +34,6 @@ cd ~/app && npm i --only=prod
 
 #moving files
 sudo mv /tmp/webservice.service /etc/systemd/system/webservice.service
-# sudo systemctl enable webservice.service
-# sudo systemctl start webservice.service
+sudo touch /etc/systemd/system/db.env
+sudo systemctl enable webservice.service
+#sudo systemctl start webservice.service

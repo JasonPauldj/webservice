@@ -1,26 +1,31 @@
+require('dotenv').config();
 const {
     S3Client,
     PutObjectCommand,
     GetObjectCommand,
-    DeleteObjectCommand,
-    ListObjectsCommand
+    DeleteObjectCommand
 } = require("@aws-sdk/client-s3");
-const {
-    fromIni
-} = require("@aws-sdk/credential-provider-ini");
+
+//required for local machine
+// const {
+//     fromIni
+// } = require("@aws-sdk/credential-provider-ini");
+
+
 const fs = require('fs');
 
-const region = 'us-east-1';
-const AccessKeyId = 'AKIAXKAXXQMWUEF55IWK';
-const SecretAccessKey = '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';
-const bucketName = 'csye6225-dev-test-bucket';
+//const region = 'us-east-1';
+const bucketName = process.env.S3_BUCKETNAME;
 
-const s3 = new S3Client({
-    region,
-    credentials: fromIni({
-        profile: 'dev'
-    })
-});
+//required for local machine
+// const s3 = new S3Client({
+//     region,
+//     credentials: fromIni({
+//         profile: 'dev'
+//     })
+// });
+
+const s3 = new S3Client();
 
 
 // uploads a file to s3

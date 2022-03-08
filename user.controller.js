@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const Joi = require('joi');
 const userService = require('./user.service');
@@ -19,6 +20,9 @@ const unlinkFile = util.promisify(fs.unlink);
 const upload = multer({
     dest: 'uploads/'
 });
+
+const bucketName = process.env.S3_BUCKETNAME;
+
 const userRouter = express.Router();
 
 userRouter.route('/').
@@ -143,6 +147,10 @@ get((req, res) => {
             createdAt,
             updatedAt,
             password,
+            url,
+            file_name,
+            file_id,
+            upload_date,
             ...userInfo
         } = user.dataValues;
         res.status(200);
@@ -213,9 +221,9 @@ userRouter.route('/self/pic').post((req, res, next) => {
         console.log(file);
 
         //if profile picture already exists
-        if (req.user.dataValues.url != null) {
+        if (req.user.dataValues.file_id != null) {
             console.log(req.user);
-            const key = req.user.id + '/' + req.user.file_name;
+            const key = req.user.file_id + '/' + req.user.file_name;
             let result = await getFile(key);
             //if we found a file, we will first delete it
             if (result) {
@@ -224,21 +232,22 @@ userRouter.route('/self/pic').post((req, res, next) => {
                     url: null,
                     file_name: null,
                     upload_date: null,
+                    file_id:null,
                     account_updated: new Date()
                 });
             }
         }
 
-        const key = req.user.id + '/' + req.file.originalname;
+        const key = file.filename + '/' + file.originalname;
         //uploading file to s3
         let result = await uploadFile(file, key);
         console.log('result');
         console.log(result);
         let resObj = {};
         resObj.user_id = req.user.id;
-        resObj.id = req.user.id;
+        resObj.id = file.filename;
         resObj.file_name = file.originalname;
-        resObj.url = 'https://csye6225-dev-test-bucket.s3.amazonaws.com/' + req.user.id + '/' + file.originalname;
+        resObj.url = bucketName + '/' + file.filename + '/' + file.originalname;
         resObj.upload_date = new Date().toISOString().split('T')[0];
 
         //deleting file from folder
@@ -249,6 +258,7 @@ userRouter.route('/self/pic').post((req, res, next) => {
             url: resObj.url,
             file_name: resObj.file_name,
             upload_date: resObj.upload_date,
+            file_id : resObj.id,
             account_updated: new Date()
         }).then(() => {
             res.status(200);
@@ -289,7 +299,7 @@ userRouter.route('/self/pic').post((req, res, next) => {
         res.sendStatus(401);
     })
 }, async (req, res, next) => {
-    const key = req.user.id + '/' + req.user.file_name;
+    const key = req.user.file_id + '/' + req.user.file_name;
     console.log("key " + key);
     try {
         const result = await getFile(key);
@@ -297,6 +307,7 @@ userRouter.route('/self/pic').post((req, res, next) => {
         if (result) {
             const {
                 file_name,
+                file_id,
                 url,
                 id,
                 upload_date,
@@ -305,9 +316,9 @@ userRouter.route('/self/pic').post((req, res, next) => {
             res.json({
                 file_name,
                 url,
-                id,
                 upload_date,
-                user_id: id
+                user_id: id,
+                id:file_id
             });
         }
     } catch (err) {
@@ -343,9 +354,9 @@ userRouter.route('/self/pic').post((req, res, next) => {
 
 }, async (req, res, next) => {
     //if the file exist
-    if (req.user.url) {
+    if (req.user.file_id) {
 
-        const key = req.user.dataValues.id + '/' + req.user.dataValues.file_name;
+        const key = req.user.file_id + '/' + req.user.file_name;
 
         //checking if the file exists in S3
         try {
@@ -360,6 +371,7 @@ userRouter.route('/self/pic').post((req, res, next) => {
                 url: null,
                 file_name: null,
                 upload_date: null,
+                file_id:null,
                 account_updated: new Date()
             }).then(() => {
                 res.sendStatus(204);
