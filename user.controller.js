@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const Joi = require('joi');
 const userService = require('./user.service');
+const pictureService = require('./picture.service');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const {
@@ -202,6 +203,7 @@ userRouter.route('/self/pic').post((req, res, next) => {
             console.log("password incorrect");
             throw ('you are not authorized');
         }
+        console.log("user succesfully authenticated");
         req.user = user;
         next();
     }, (err) => {
@@ -214,58 +216,54 @@ userRouter.route('/self/pic').post((req, res, next) => {
 
 }, upload.single('profilePic'), async (req, res, next) => {
     const file = req.file;
-
     if (file) {
 
-        console.log('file');
-        console.log(file);
 
-        //if profile picture already exists
-        if (req.user.dataValues.file_id != null) {
-            console.log(req.user);
-            const key = req.user.file_id + '/' + req.user.file_name;
+        let pic = await pictureService.getPictureByUserId(req.user.id);
+
+        //if profile picture already exists then delete it from S3 and table
+        if (pic) {
+            const key = req.user.id + '/' + pic.file_name;
             let result = await getFile(key);
             //if we found a file, we will first delete it
             if (result) {
                 let delRes = await deleteFile(key);
-                let user = await userService.updateUserByModelInstance(req.user, {
-                    url: null,
-                    file_name: null,
-                    upload_date: null,
-                    file_id:null,
-                    account_updated: new Date()
-                });
+
+                pictureService.deletePic(req.user.id);
+
             }
         }
 
-        const key = file.filename + '/' + file.originalname;
+        const key = req.user.id + '/' + file.originalname;
         //uploading file to s3
         let result = await uploadFile(file, key);
         console.log('result');
         console.log(result);
         let resObj = {};
-        resObj.user_id = req.user.id;
-        resObj.id = file.filename;
+        resObj.userId = req.user.id;
         resObj.file_name = file.originalname;
-        resObj.url = bucketName + '/' + file.filename + '/' + file.originalname;
+        resObj.url = bucketName + '/' + req.user.id + '/' + file.originalname;
         resObj.upload_date = new Date().toISOString().split('T')[0];
+
+        //creating the picture in DB
+        pic = await pictureService.create({
+            userId: resObj.userId,
+            file_name: resObj.file_name,
+            upload_date: resObj.upload_date,
+            url: resObj.url
+        })
 
         //deleting file from folder
         await unlinkFile(file.path);
 
-        //updating the user
-        userService.updateUserByModelInstance(req.user, {
-            url: resObj.url,
-            file_name: resObj.file_name,
-            upload_date: resObj.upload_date,
-            file_id : resObj.id,
-            account_updated: new Date()
-        }).then(() => {
-            res.status(200);
-            res.json(resObj);
-        }).catch(e => {
-            console.log("there was an error while updating the database.")
-        })
+        res.status(200);
+        res.json({
+            userId: pic.userId,
+            file_name: pic.file_name,
+            upload_date: pic.upload_date,
+            id: pic.id,
+            url: pic.url
+        });
 
     } else {
         //if no attached pic
@@ -289,6 +287,7 @@ userRouter.route('/self/pic').post((req, res, next) => {
             console.log("password incorrect");
             throw ('you are not authorized');
         }
+        console.log("user succesfully authenticated");
         req.user = user;
         next();
 
@@ -299,31 +298,33 @@ userRouter.route('/self/pic').post((req, res, next) => {
         res.sendStatus(401);
     })
 }, async (req, res, next) => {
-    const key = req.user.file_id + '/' + req.user.file_name;
-    console.log("key " + key);
-    try {
-        const result = await getFile(key);
-        console.log('result in get ' + result);
-        if (result) {
-            const {
-                file_name,
-                file_id,
-                url,
-                id,
-                upload_date,
-            } = req.user;
-            res.status(200);
-            res.json({
-                file_name,
-                url,
-                upload_date,
-                user_id: id,
-                id:file_id
-            });
+
+    //getting the pic from db
+    let pic = await pictureService.getPictureByUserId(req.user.id);
+
+    //if we found pic
+    if (pic) {
+        const key = req.user.id + '/' + pic.file_name;
+        try {
+            const result = await getFile(key);
+            if (result) {
+                res.status(200);
+                res.json({
+                    file_name: pic.file_name,
+                    url: pic.url,
+                    upload_date: pic.upload_date,
+                    user_id: pic.userId,
+                    id: pic.id
+                });
+            }
+        } catch (err) {
+            console.log("couldn't find the file");
+            res.sendStatus(404);
         }
-    } catch (err) {
+    }
+    else{
         console.log("couldn't find the file");
-        res.sendStatus(404);
+            res.sendStatus(404);
     }
 
 }).delete((req, res, next) => {
@@ -344,6 +345,7 @@ userRouter.route('/self/pic').post((req, res, next) => {
             throw ('you are not authorized');
         }
         req.user = user;
+        console.log("user succesfully authenticated");
         next();
     }, (err) => {
         res.sendStatus(503)
@@ -353,10 +355,14 @@ userRouter.route('/self/pic').post((req, res, next) => {
     })
 
 }, async (req, res, next) => {
-    //if the file exist
-    if (req.user.file_id) {
 
-        const key = req.user.file_id + '/' + req.user.file_name;
+    //getting the pic from db
+    let pic = await pictureService.getPictureByUserId(req.user.id);
+
+    //if we found pic
+    if (pic) {
+
+        const key = req.user.id + '/' + pic.file_name;
 
         //checking if the file exists in S3
         try {
@@ -367,16 +373,10 @@ userRouter.route('/self/pic').post((req, res, next) => {
 
         //deleting the file
         deleteFile(key).then(() => {
-            userService.updateUserByModelInstance(req.user, {
-                url: null,
-                file_name: null,
-                upload_date: null,
-                file_id:null,
-                account_updated: new Date()
-            }).then(() => {
+            pictureService.deletePic(req.user.id).then(() => {
                 res.sendStatus(204);
             }).catch(e => {
-                console.log("there was an error while updating the database.")
+                console.log("there was an error while deleting the picture in DB.")
             })
         }, (err) => {
             res.sendStatus(503);
@@ -386,6 +386,8 @@ userRouter.route('/self/pic').post((req, res, next) => {
         res.sendStatus(404);
     }
 })
+
+
 
 
 module.exports = userRouter;

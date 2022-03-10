@@ -37,23 +37,20 @@ async function initialize() {
     });
     await connection.query(`CREATE DATABASE IF NOT EXISTS \`${database}\`;`);
 
-    const sequelize = new Sequelize(database, user, password, { dialect: 'mysql' });
-    // const sequelize = new Sequelize(database, user, password, {
-    //     host: host,
-    //     port: port,
-    //     dialect: 'mysql',
-    //     dialectOptions: {
-    //         ssl: 'Amazon RDS'
-    //     }
-    // });
-
+   // const sequelize = new Sequelize(database, user, password, { dialect: 'mysql' });
+    const sequelize = new Sequelize(database, user, password, {
+        host: host,
+        port: port,
+        dialect: 'mysql',
+        dialectOptions: {
+            ssl: 'Amazon RDS'
+        }
+    });
 
     db.User = require('./user.model.js')(sequelize);
     db.Picture = require('./picture.model.js')(sequelize);
     //foreign key is being added to picture that refers to id column in user_id 
     db.Picture.belongsTo(db.User, {as: 'user_'});
     
-    await sequelize.sync({
-        alter: true
-    });
+    await sequelize.sync({alter: true});
 }
