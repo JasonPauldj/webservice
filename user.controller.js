@@ -216,54 +216,66 @@ userRouter.route('/self/pic').post((req, res, next) => {
 
 }, upload.single('profilePic'), async (req, res, next) => {
     const file = req.file;
+
+    //if the user added a file.
     if (file) {
 
+        const fileExtension = file.originalname.split('.').pop();
+        
+        const allowedExtensions = ['png','jpg','jpeg','PNG','JPG','JPEG'];
+        // if right file extension is added
+        if (fileExtension && allowedExtensions.filter((extension)=> extension===fileExtension).length >0 ) {
 
-        let pic = await pictureService.getPictureByUserId(req.user.id);
+            (fileExtension === 'png' || fileExtension === 'jpg' || fileExtension === 'jpeg' || fileExtension === 'PNG' || fileExtension === 'JPG' || fileExtension === 'JPEG')
+            let pic = await pictureService.getPictureByUserId(req.user.id);
 
-        //if profile picture already exists then delete it from S3 and table
-        if (pic) {
-            const key = req.user.id + '/' + pic.file_name;
-            let result = await getFile(key);
-            //if we found a file, we will first delete it
-            if (result) {
-                let delRes = await deleteFile(key);
+            //if profile picture already exists then delete it from S3 and table
+            if (pic) {
+                const key = req.user.id + '/' + pic.file_name;
+                let result = await getFile(key);
+                //if we found a file, we will first delete it
+                if (result) {
+                    let delRes = await deleteFile(key);
 
-                pictureService.deletePic(req.user.id);
+                    pictureService.deletePic(req.user.id);
 
+                }
             }
+
+            const key = req.user.id + '/' + file.originalname;
+            //uploading file to s3
+            let result = await uploadFile(file, key);
+            console.log('result');
+            console.log(result);
+            let resObj = {};
+            resObj.userId = req.user.id;
+            resObj.file_name = file.originalname;
+            resObj.url = bucketName + '/' + req.user.id + '/' + file.originalname;
+            resObj.upload_date = new Date().toISOString().split('T')[0];
+
+            //creating the picture in DB
+            pic = await pictureService.create({
+                userId: resObj.userId,
+                file_name: resObj.file_name,
+                upload_date: resObj.upload_date,
+                url: resObj.url
+            })
+
+            //deleting file from folder
+            await unlinkFile(file.path);
+
+            res.status(200);
+            res.json({
+                userId: pic.userId,
+                file_name: pic.file_name,
+                upload_date: pic.upload_date,
+                id: pic.id,
+                url: pic.url
+            });
+        } else {
+            //wrong extension
+            res.sendStatus(400);
         }
-
-        const key = req.user.id + '/' + file.originalname;
-        //uploading file to s3
-        let result = await uploadFile(file, key);
-        console.log('result');
-        console.log(result);
-        let resObj = {};
-        resObj.userId = req.user.id;
-        resObj.file_name = file.originalname;
-        resObj.url = bucketName + '/' + req.user.id + '/' + file.originalname;
-        resObj.upload_date = new Date().toISOString().split('T')[0];
-
-        //creating the picture in DB
-        pic = await pictureService.create({
-            userId: resObj.userId,
-            file_name: resObj.file_name,
-            upload_date: resObj.upload_date,
-            url: resObj.url
-        })
-
-        //deleting file from folder
-        await unlinkFile(file.path);
-
-        res.status(200);
-        res.json({
-            userId: pic.userId,
-            file_name: pic.file_name,
-            upload_date: pic.upload_date,
-            id: pic.id,
-            url: pic.url
-        });
 
     } else {
         //if no attached pic
@@ -321,10 +333,9 @@ userRouter.route('/self/pic').post((req, res, next) => {
             console.log("couldn't find the file");
             res.sendStatus(404);
         }
-    }
-    else{
+    } else {
         console.log("couldn't find the file");
-            res.sendStatus(404);
+        res.sendStatus(404);
     }
 
 }).delete((req, res, next) => {

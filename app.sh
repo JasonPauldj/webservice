@@ -8,6 +8,8 @@ sudo yum update -y
 # sudo yum install -y https://dev.mysql.com/get/mysql80-community-release-el7-5.noarch.rpm
 # sudo yum install -y mysql-community-server
 
+sudo yum -y install mysql
+
 # #enabling mysql on instance start
 # sudo systemctl start mysqld 
 # sudo systemctl enable mysqld 
