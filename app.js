@@ -2,10 +2,11 @@
 const express = require('express');
 const userRouter = require('./user.controller');
 
-
 const app = express();
 
 app.use(express.json());
+
+//app.use(express.raw({limit: '50mb',type: ['image/*']}));
 
 app.use('/v1/user',userRouter);
 
