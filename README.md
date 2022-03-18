@@ -1,5 +1,5 @@
 # webservice
-This repository contains the code of all assignments for the course. Added packer.
+This repository contains the code of all assignments for the course.
 ---
 
 ## Table of contents
