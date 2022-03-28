@@ -4,6 +4,9 @@ sleep 30
 
 sudo yum update -y
 
+echo "intial path"
+pwd
+
 #installing my-sql-community-server
 # sudo yum install -y https://dev.mysql.com/get/mysql80-community-release-el7-5.noarch.rpm
 # sudo yum install -y mysql-community-server
@@ -30,12 +33,32 @@ sudo yum install -y nodejs
 
 #unzipping webservice
 sudo yum install unzip -y
+echo "unzipping webservice"
+pwd
 cd ~/ && mkdir app
 cd ~/ && unzip webservice.zip -d ~/app
 cd ~/app && npm i --only=prod
 
+echo "moving files..."
+pwd
 #moving files
 sudo mv /tmp/webservice.service /etc/systemd/system/webservice.service
 sudo touch /etc/systemd/system/db.env
 sudo systemctl enable webservice.service
 #sudo systemctl start webservice.service
+
+#installing code-deploy agent
+cd ~/
+echo "install code-deploy agent..."
+pwd
+sudo yum install -y ruby
+sudo yum install -y wget
+echo "which ruby check"
+which ruby
+CODEDEPLOY_BIN="/opt/codedeploy-agent/bin/codedeploy-agent"
+$CODEDEPLOY_BIN stop
+yum erase codedeploy-agent -y
+cd /home/ec2-user
+wget https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install
+sudo chmod +x ./install
+sudo ./install auto
