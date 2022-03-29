@@ -7,7 +7,7 @@ pwd
 echo "listing before changing permissions"
 ls -l
 cd /home/ec2-user/app 
-sudo chown ec2-user *
+#sudo chown ec2-user *
 echo "listing after changing permissions"
 ls -l
 
