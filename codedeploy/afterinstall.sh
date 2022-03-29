@@ -6,7 +6,7 @@ echo "printing pwd"
 pwd
 echo "listing before changing permissions"
 ls -l
-sudo chown ec2-user *
+cd /home/ec2-user/app && sudo chown ec2-user *
 echo "listing after changing permissions"
 ls -l
 
