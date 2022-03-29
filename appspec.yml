@@ -5,8 +5,8 @@ version: 0.0
 os: linux
 
 files:
-  - source: ./webservice.zip
-    destination: /home/ec2-user/webservice.zip
+  - source: ./
+    destination: /home/ec2-user/app
 
 hooks:
   BeforeInstall:
