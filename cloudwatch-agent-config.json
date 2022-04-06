@@ -13,9 +13,9 @@
               "log_stream_name": "webapp"
             }
           ]
-        },
-        "log_stream_name": "cloudwatch_log_stream"
-      }
+        }
+      },
+      "log_stream_name": "cloudwatch_log_stream"
     },
     "metrics": {
       "metrics_collected": {
