@@ -16,6 +16,7 @@ const {
     del
 } = require('express/lib/application');
 const unlinkFile = util.promisify(fs.unlink);
+const logger = require('./loggerConfig/winston');
 
 
 const upload = multer({
@@ -35,8 +36,10 @@ post((req, res, next) => {
             password: Joi.string().min(6).required()
         });
 
-        if (validateRequest(req, res, next, schema))
+        if (validateRequest(req, res, next, schema)){
+            logger.info("POST NEW USER - Valid user data.");
             next();
+        }
         else {
             res.sendStatus(400)
         }
@@ -47,18 +50,22 @@ post((req, res, next) => {
         req.body.account_updated = new Date();
         userService.create(req.body).then((user) => {
 
-            console.log("User created successfully");
-            console.log(user);
-
+            //  console.log("User created successfully");
+            logger.info("POST NEW USER - User created successfully");
             res.statusCode = 201;
             res.setHeader('Content-type', 'application/json');
             res.json(user);
 
         }, (err) => {
-            if (err === 'Username is already taken') res.sendStatus(400);
+            if (err === 'Username is already taken') {
+                logger.info("POST NEW USER - Username is already taken.");
+                res.sendStatus(400);
+
+            }
             else res.sendStatus(503)
         }).catch(err => {
-            console.log("error while creating object " + err);
+            logger.error("POST NEW USER - Error while creating new user.");
+            // console.log("error while creating object " + err);
             res.sendStatus(400);
 
         })
@@ -69,6 +76,7 @@ userRouter.route('/self').put((req, res, next) => {
     //checking for authorization header
     let authHeader = req.headers.authorization;
     if (!authHeader) {
+        logger.info("PUT USER - Authentication is required");
         res.setHeader('WWW-Authenticate', 'Basic');
         res.sendStatus(401);
         return;
@@ -82,6 +90,7 @@ userRouter.route('/self').put((req, res, next) => {
     });
 
     if (!validateRequest(req, res, next, schema)) {
+        logger.info("PUT USER - Invalid user details.");
         res.sendStatus(400);
         return;
     }
@@ -91,16 +100,19 @@ userRouter.route('/self').put((req, res, next) => {
     userService.getUserByUserName(credentials[0]).then(async (user) => {
 
         if (!user) {
+            logger.info(`PUT USER - Username ${givenUserName} does not exist`);
             throw 'Username "' + givenUserName + '" is does not exist';
         }
 
         //verifying password
         if (!(await bcrypt.compare(credentials[1], user.dataValues.password))) {
-            console.log("password incorrect");
+            // console.log("password incorrect");
+            logger.info("PUT USER - Incorrect Password");
             throw ('you are not authorized');
         }
 
         req.user = user;
+        logger.info("PUT USER - User successfully authenticated.");
         next();
     }, (err) => {
         res.sendStatus(503)
@@ -116,11 +128,14 @@ userRouter.route('/self').put((req, res, next) => {
         password: await bcrypt.hash(req.body.password, 10),
         account_updated: new Date()
     }).then((user) => {
+        logger.info("PUT USER - User successfully updated.");
         res.sendStatus(204)
     }, (err) => {
+        logger.info("PUT USER - There was an error 503");
         res.sendStatus(503)
     }).catch((err) => {
-        console.log("error in put " + err);
+        logger.info("PUT USER - There was an error");
+        //console.log("error in put " + err);
     })
 
 }).
@@ -128,6 +143,7 @@ get((req, res) => {
     //checking for authorization header
     let authHeader = req.headers.authorization;
     if (!authHeader) {
+        logger.info("GET USER - Authentication required");
         res.setHeader('WWW-Authenticate', 'Basic');
         res.sendStatus(401);
         return;
@@ -140,7 +156,8 @@ get((req, res) => {
 
         //verifying password
         if (!(await bcrypt.compare(credentials[1], user.dataValues.password))) {
-            console.log("password incorrect");
+            // console.log("password incorrect");
+            logger.info("GET USER - Incorrect Password ");
             throw ('you are not authorized');
         }
 
@@ -154,9 +171,11 @@ get((req, res) => {
             upload_date,
             ...userInfo
         } = user.dataValues;
+        logger.info("GET USER - User successfully authenticated");
         res.status(200);
         res.json(userInfo);
     }, (err) => {
+        logger.info("GET USER - There was an error 503 ");
         res.sendStatus(503)
     }).catch(err => {
         res.setHeader('WWW-Authenticate', 'Basic');
@@ -186,6 +205,7 @@ userRouter.route('/self/pic').post((req, res, next) => {
     //checking for authorization header
     let authHeader = req.headers.authorization;
     if (!authHeader) {
+        logger.info("POST USER PIC - Authentication Required");
         res.setHeader('WWW-Authenticate', 'Basic');
         res.sendStatus(401);
         return;
@@ -195,21 +215,23 @@ userRouter.route('/self/pic').post((req, res, next) => {
     userService.getUserByUserName(credentials[0]).then(async (user) => {
 
         if (!user) {
+            logger.info("POST USER PIC - User does not exist");
             throw 'Username "' + givenUserName + '" is does not exist';
         }
 
         //verifying password
         if (!(await bcrypt.compare(credentials[1], user.dataValues.password))) {
-            console.log("password incorrect");
+            logger.info("POST USER PIC - Incorrect Password");
             throw ('you are not authorized');
         }
-        console.log("user succesfully authenticated");
+        logger.info("POST USER PIC - User successfully authenticated.");
         req.user = user;
         next();
     }, (err) => {
-        console.log(err);
+        logger.info("POST USER PIC - There was an error");
         res.sendStatus(503)
     }).catch(err => {
+        logger.info("POST USER PIC - There was an error");
         res.setHeader('WWW-Authenticate', 'Basic');
         res.sendStatus(401);
     })
@@ -221,10 +243,10 @@ userRouter.route('/self/pic').post((req, res, next) => {
     if (file) {
 
         const fileExtension = file.originalname.split('.').pop();
-        
-        const allowedExtensions = ['png','jpg','jpeg','PNG','JPG','JPEG'];
+
+        const allowedExtensions = ['png', 'jpg', 'jpeg', 'PNG', 'JPG', 'JPEG'];
         // if right file extension is added
-        if (fileExtension && allowedExtensions.filter((extension)=> extension===fileExtension).length >0 ) {
+        if (fileExtension && allowedExtensions.filter((extension) => extension === fileExtension).length > 0) {
 
             (fileExtension === 'png' || fileExtension === 'jpg' || fileExtension === 'jpeg' || fileExtension === 'PNG' || fileExtension === 'JPG' || fileExtension === 'JPEG')
             let pic = await pictureService.getPictureByUserId(req.user.id);
@@ -245,8 +267,6 @@ userRouter.route('/self/pic').post((req, res, next) => {
             const key = req.user.id + '/' + file.originalname;
             //uploading file to s3
             let result = await uploadFile(file, key);
-            console.log('result');
-            console.log(result);
             let resObj = {};
             resObj.userId = req.user.id;
             resObj.file_name = file.originalname;
@@ -263,7 +283,7 @@ userRouter.route('/self/pic').post((req, res, next) => {
 
             //deleting file from folder
             await unlinkFile(file.path);
-
+            logger.info("POST USER PIC -  Picture succesfully uploaded to s3.");
             res.status(200);
             res.json({
                 userId: pic.userId,
@@ -274,11 +294,13 @@ userRouter.route('/self/pic').post((req, res, next) => {
             });
         } else {
             //wrong extension
+            logger.info("POST USER PIC -  Picture unsuccesfully uploaded to s3. Wrong extension.");
             res.sendStatus(400);
         }
 
     } else {
         //if no attached pic
+        logger.info("POST USER PIC -  Picture unsuccesfully uploaded to s3. No image attached.");
         res.sendStatus(400);
     }
 }).get((req, res, next) => {
@@ -286,6 +308,7 @@ userRouter.route('/self/pic').post((req, res, next) => {
     //authorization
     let authHeader = req.headers.authorization;
     if (!authHeader) {
+        logger.info("GET USER PIC - Authentication Required");
         res.setHeader('WWW-Authenticate', 'Basic');
         res.sendStatus(401);
         return;
@@ -299,11 +322,13 @@ userRouter.route('/self/pic').post((req, res, next) => {
             console.log("password incorrect");
             throw ('you are not authorized');
         }
-        console.log("user succesfully authenticated");
+
         req.user = user;
+        logger.info("GET USER PIC - User authenticated succesfully.");
         next();
 
     }, (err) => {
+        logger.info("GET USER PIC - There was an error.");
         res.sendStatus(503)
     }).catch(err => {
         res.setHeader('WWW-Authenticate', 'Basic');
@@ -320,6 +345,7 @@ userRouter.route('/self/pic').post((req, res, next) => {
         try {
             const result = await getFile(key);
             if (result) {
+                logger.info("GET USER PIC - Got picture successfully;");
                 res.status(200);
                 res.json({
                     file_name: pic.file_name,
@@ -330,17 +356,18 @@ userRouter.route('/self/pic').post((req, res, next) => {
                 });
             }
         } catch (err) {
-            console.log("couldn't find the file");
+            logger.info("GET USER PIC - Couldn't find the file.");
             res.sendStatus(404);
         }
     } else {
-        console.log("couldn't find the file");
+        logger.info("GET USER PIC - Couldn't find the file.");
         res.sendStatus(404);
     }
 
 }).delete((req, res, next) => {
     let authHeader = req.headers.authorization;
     if (!authHeader) {
+        logger.info("DELETE USER PIC - Authentication Required");
         res.setHeader('WWW-Authenticate', 'Basic');
         res.sendStatus(401);
         return;
@@ -352,13 +379,14 @@ userRouter.route('/self/pic').post((req, res, next) => {
 
         //verifying password
         if (!(await bcrypt.compare(credentials[1], user.dataValues.password))) {
-            console.log("password incorrect");
+            logger.info("DELETE USER PIC - Incorrect Password");
             throw ('you are not authorized');
         }
         req.user = user;
-        console.log("user succesfully authenticated");
+        logger.info("DELETE USER PIC - User successfully authenticated");
         next();
     }, (err) => {
+        logger.info("DELETE USER PIC - There was an error");
         res.sendStatus(503)
     }).catch(err => {
         res.setHeader('WWW-Authenticate', 'Basic');
@@ -387,11 +415,11 @@ userRouter.route('/self/pic').post((req, res, next) => {
             pictureService.deletePic(req.user.id).then(() => {
                 res.sendStatus(204);
             }).catch(e => {
-                console.log("there was an error while deleting the picture in DB.")
+                logger.info("DELETE USER PIC - There was an error while deleting the picture in DB.");
             })
         }, (err) => {
             res.sendStatus(503);
-            console.log("there was an error while deleting the object");
+            logger.info("DELETE USER PIC - There was an error while deleting the object.");
         })
     } else {
         res.sendStatus(404);
