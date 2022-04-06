@@ -33,27 +33,26 @@ sudo yum install -y nodejs
 
 #unzipping webservice
 sudo yum install unzip -y
-echo "unzipping webservice"
 pwd
 cd ~/ && mkdir app
 cd ~/ && unzip webservice.zip -d ~/app
 cd ~/app && npm i --only=prod
 
-echo "moving files..."
 pwd
-#moving files
+#moving systemd service file
 sudo mv /tmp/webservice.service /etc/systemd/system/webservice.service
 sudo touch /etc/systemd/system/db.env
 sudo systemctl enable webservice.service
 #sudo systemctl start webservice.service
 
+#moving cloudwatch agent json file
+sudo mv /tmp/cloudwatch-agent-config.json /opt/cloudwatch-agent-config.json
+
 #installing code-deploy agent
 cd ~/
-echo "install code-deploy agent..."
 pwd
 sudo yum install -y ruby
 sudo yum install -y wget
-echo "which ruby check"
 which ruby
 CODEDEPLOY_BIN="/opt/codedeploy-agent/bin/codedeploy-agent"
 $CODEDEPLOY_BIN stop
@@ -62,3 +61,6 @@ cd /home/ec2-user
 wget https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install
 sudo chmod +x ./install
 sudo ./install auto
+
+#installing cloudwatch agent
+sudo yum install -y amazon-cloudwatch-agent
