@@ -14,7 +14,7 @@ const {
 
 const fs = require('fs');
 
-//const region = 'us-east-1';
+// const region = 'us-east-1';
 const bucketName = process.env.S3_BUCKETNAME;
 
 //required for local machine

@@ -17,6 +17,7 @@ const {
 } = require('express/lib/application');
 const unlinkFile = util.promisify(fs.unlink);
 const logger = require('./loggerConfig/winston');
+const statsdclient = require('./loggerConfig/statsd-client');
 
 
 const upload = multer({
@@ -29,6 +30,9 @@ const userRouter = express.Router();
 
 userRouter.route('/').
 post((req, res, next) => {
+
+    statsdclient.increment('POST.NEW.USER.COUNTER');
+
         const schema = Joi.object({
             first_name: Joi.string().required(),
             last_name: Joi.string().required(),
@@ -72,7 +76,7 @@ post((req, res, next) => {
     });
 
 userRouter.route('/self').put((req, res, next) => {
-
+    statsdclient.increment('PUT.UPDATE.USER.COUNTER');
     //checking for authorization header
     let authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -140,6 +144,10 @@ userRouter.route('/self').put((req, res, next) => {
 
 }).
 get((req, res) => {
+
+    statsdclient.increment('GET.USER.COUNTER');
+
+
     //checking for authorization header
     let authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -202,6 +210,8 @@ function validateRequest(req, res, next, schema) {
 
 
 userRouter.route('/self/pic').post((req, res, next) => {
+
+    statsdclient.increment('POST.USER.PIC.COUNTER');
     //checking for authorization header
     let authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -305,6 +315,8 @@ userRouter.route('/self/pic').post((req, res, next) => {
     }
 }).get((req, res, next) => {
 
+    statsdclient.increment('GET.USER.PIC.COUNTER');
+
     //authorization
     let authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -365,6 +377,9 @@ userRouter.route('/self/pic').post((req, res, next) => {
     }
 
 }).delete((req, res, next) => {
+
+    statsdclient.increment('DELETE.USER.PIC.COUNTER');
+
     let authHeader = req.headers.authorization;
     if (!authHeader) {
         logger.info("DELETE USER PIC - Authentication Required");
