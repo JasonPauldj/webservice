@@ -62,3 +62,6 @@ cd /home/ec2-user
 wget https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install
 sudo chmod +x ./install
 sudo ./install auto
+
+#installing cloudwatch agent
+sudo yum install -y amazon-cloudwatch-agent
