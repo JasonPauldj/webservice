@@ -8,7 +8,7 @@ app.use(express.json());
 
 //app.use(express.raw({limit: '50mb',type: ['image/*']}));
 
-app.use('/v1/user',userRouter);
+app.use('/v2/user',userRouter);
 
 app.get('/healthz', (req,res) => {
     res.sendStatus(200)
