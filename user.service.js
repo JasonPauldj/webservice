@@ -59,7 +59,7 @@ async function updateUserByModelInstance(user,params){
  * @returns 
  */
 async function verifyUserByUserName(username){
-    let user = await User.findOne({
+    let user = await db.User.findOne({
         where :{
             username : username
         }
