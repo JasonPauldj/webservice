@@ -18,8 +18,16 @@ const {
 const unlinkFile = util.promisify(fs.unlink);
 const logger = require('./loggerConfig/winston');
 const statsdclient = require('./loggerConfig/statsd-client');
-const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
-const { DynamoDBClient, PutItemCommand } = require("@aws-sdk/client-dynamodb");
+const {
+    SNSClient,
+    PublishCommand
+} = require("@aws-sdk/client-sns");
+const {
+    DynamoDBClient,
+    PutItemCommand,
+    GetItemCommand,
+    QueryCommand
+} = require("@aws-sdk/client-dynamodb");
 const crypto = require('crypto');
 
 //for local machine
@@ -42,7 +50,7 @@ const crypto = require('crypto');
 
 //for PROD
 const snsClient = new SNSClient();
-const dynamodbClient= new DynamoDBClient();
+const dynamodbClient = new DynamoDBClient();
 
 const upload = multer({
     dest: 'uploads/'
@@ -52,11 +60,11 @@ const bucketName = process.env.S3_BUCKETNAME;
 
 const userRouter = express.Router();
 
-
+//POST A NEW USER - WITHOUT AUTHENTICATION
 userRouter.route('/').
 post((req, res, next) => {
 
-    statsdclient.increment('POST.NEW.USER.COUNTER');
+        statsdclient.increment('POST.NEW.USER.COUNTER');
 
         const schema = Joi.object({
             first_name: Joi.string().required(),
@@ -65,19 +73,18 @@ post((req, res, next) => {
             password: Joi.string().min(6).required()
         });
 
-        if (validateRequest(req, res, next, schema)){
+        if (validateRequest(req, res, next, schema)) {
             logger.info("POST NEW USER - Valid user data.");
             next();
-        }
-        else {
+        } else {
             res.sendStatus(400)
         }
     },
 
-     (req, res) => {
+    (req, res) => {
         req.body.account_created = new Date();
         req.body.account_updated = new Date();
-        req.body.isVerified=false;
+        req.body.isVerified = false;
         userService.create(req.body).then(async (user) => {
 
             logger.info("POST NEW USER - User created successfully");
@@ -89,18 +96,20 @@ post((req, res, next) => {
             //Putting item in DynamoDB
             const token = crypto.randomBytes(64).toString('hex');
             const tableName = process.env.DYNAMODB_TABLE_NAME;
-            console.log("user in post",user);
-            console.log("token ", token);
             let currentTime = new Date().getTime();
-            let ttl = Math.round(currentTime/1000) + 5 * 60 ;
-            console.log("user in post",user);
-            console.log("token ", token);
-            console.log("ttl",ttl);
+            let ttl = Math.round(currentTime / 1000) + 5 * 60;
+            // console.log("ttl",ttl);
             const dynamoInputParams = {
-                Item : {
-                    userId: {S: user.id},
-                    token: {S: token},
-                    ttl: {N: ttl.toString()}
+                Item: {
+                    userId: {
+                        S: user.username
+                    },
+                    token: {
+                        S: token
+                    },
+                    ttl: {
+                        N: ttl.toString()
+                    }
                 },
                 TableName: tableName
             }
@@ -108,36 +117,34 @@ post((req, res, next) => {
 
             try {
                 const dynamoResponse = await dynamodbClient.send(dynamoCommand);
-                console.log(dynamoResponse);
+                //console.log(dynamoResponse);
                 logger.info("Successfully put item in dynamoDB");
-            }
-            catch(err) {
+            } catch (err) {
                 console.log(err);
                 throw err;
             }
 
             //Publishing message to SNS
             const TopicArn = process.env.SNS_TOPIC_ARN;
-            const inputParams ={
+            const inputParams = {
                 MessageStructure: "json",
-                Message:JSON.stringify({
-                    lambda : JSON.stringify({
-                        username : req.body.username,
+                Message: JSON.stringify({
+                    lambda: JSON.stringify({
+                        username: req.body.username,
                         token: token
                     }),
-                    default : JSON.stringify({
-                        username : req.body.username,
+                    default: JSON.stringify({
+                        username: req.body.username,
                         token: token
                     })
                 }),
                 TopicArn: TopicArn
             }
             const command = new PublishCommand(inputParams);
-            try{
-             const response = await snsClient.send(command);
-             logger.info("Successfully published data to SNS");
-            }
-            catch(err) {
+            try {
+                const response = await snsClient.send(command);
+                logger.info("Successfully published data to SNS");
+            } catch (err) {
                 console.log(err);
                 throw err;
             }
@@ -148,8 +155,7 @@ post((req, res, next) => {
                 logger.info("POST NEW USER - Username is already taken.");
                 res.sendStatus(400);
 
-            }
-            else res.sendStatus(503)
+            } else res.sendStatus(503)
         }).catch(err => {
             logger.error("POST NEW USER - Error while creating new user.");
             // console.log("error while creating object " + err);
@@ -158,8 +164,18 @@ post((req, res, next) => {
         })
     });
 
+
+//EVERYROUTE BELOW REQUIRES AUTHENTICATION
+
+const checkUserVerification = async (username) => {
+    const user = await userService.getUserByUserName(username);
+    return user.isVerified;
+}
+
 userRouter.route('/self').put((req, res, next) => {
     statsdclient.increment('PUT.UPDATE.USER.COUNTER');
+
+
     //checking for authorization header
     let authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -184,6 +200,7 @@ userRouter.route('/self').put((req, res, next) => {
 
 
     let credentials = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+    const givenUserName = credentials[0];
     userService.getUserByUserName(credentials[0]).then(async (user) => {
 
         if (!user) {
@@ -198,9 +215,15 @@ userRouter.route('/self').put((req, res, next) => {
             throw ('you are not authorized');
         }
 
-        req.user = user;
-        logger.info("PUT USER - User successfully authenticated.");
-        next();
+        //checking if user is isVerified
+        if (!user.isVerified) {
+            res.status(403);
+            res.send('You have not been verified');
+        } else {
+            req.user = user;
+            logger.info("PUT USER - User successfully authenticated.");
+            next();
+        }
     }, (err) => {
         res.sendStatus(503)
     }).catch(err => {
@@ -218,7 +241,7 @@ userRouter.route('/self').put((req, res, next) => {
         logger.info("PUT USER - User successfully updated.");
         res.sendStatus(204)
     }, (err) => {
-        logger.info("PUT USER - There was an error 503");
+        logger.error("PUT USER - There was an error 503");
         res.sendStatus(503)
     }).catch((err) => {
         logger.info("PUT USER - There was an error");
@@ -241,9 +264,14 @@ get((req, res) => {
     }
 
     const credentials = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-
+    const givenUserName = credentials[0];
     userService.getUserByUserName(credentials[0]).then(async (user) => {
-        console.log(user);
+
+        if (!user) {
+            logger.info(`GET USER - Username ${givenUserName} does not exist`);
+            throw 'Username "' + givenUserName + '" is does not exist';
+        }
+
 
         //verifying password
         if (!(await bcrypt.compare(credentials[1], user.dataValues.password))) {
@@ -252,19 +280,25 @@ get((req, res) => {
             throw ('you are not authorized');
         }
 
-        const {
-            createdAt,
-            updatedAt,
-            password,
-            url,
-            file_name,
-            file_id,
-            upload_date,
-            ...userInfo
-        } = user.dataValues;
-        logger.info("GET USER - User successfully authenticated");
-        res.status(200);
-        res.json(userInfo);
+        //checking if user is isVerified
+        if (!user.isVerified) {
+            res.status(403);
+            res.send('You have not been verified');
+        } else {
+            const {
+                createdAt,
+                updatedAt,
+                password,
+                url,
+                file_name,
+                file_id,
+                upload_date,
+                ...userInfo
+            } = user.dataValues;
+            logger.info("GET USER - User successfully authenticated");
+            res.status(200);
+            res.json(userInfo);
+        }
     }, (err) => {
         logger.info("GET USER - There was an error 503 ");
         res.sendStatus(503)
@@ -305,8 +339,8 @@ userRouter.route('/self/pic').post((req, res, next) => {
     }
 
     const credentials = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+    const givenUserName = credentials[0];
     userService.getUserByUserName(credentials[0]).then(async (user) => {
-
         if (!user) {
             logger.info("POST USER PIC - User does not exist");
             throw 'Username "' + givenUserName + '" is does not exist';
@@ -317,9 +351,15 @@ userRouter.route('/self/pic').post((req, res, next) => {
             logger.info("POST USER PIC - Incorrect Password");
             throw ('you are not authorized');
         }
-        logger.info("POST USER PIC - User successfully authenticated.");
-        req.user = user;
-        next();
+        //checking if user is isVerified
+        if (!user.isVerified) {
+            res.status(403);
+            res.send('You have not been verified');
+        } else {
+            logger.info("POST USER PIC - User successfully authenticated.");
+            req.user = user;
+            next();
+        }
     }, (err) => {
         logger.info("POST USER PIC - There was an error");
         res.sendStatus(503)
@@ -409,18 +449,28 @@ userRouter.route('/self/pic').post((req, res, next) => {
         return;
     }
     const credentials = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+    const givenUserName = credentials[0];
     userService.getUserByUserName(credentials[0]).then(async (user) => {
-        console.log(user);
+        if (!user) {
+            logger.info("POST USER PIC - User does not exist");
+            throw 'Username "' + givenUserName + '" is does not exist';
+        }
 
         //verifying password
         if (!(await bcrypt.compare(credentials[1], user.dataValues.password))) {
             console.log("password incorrect");
             throw ('you are not authorized');
         }
+        //checking if user is isVerified
+        if (!user.isVerified) {
+            res.status(403);
+            res.send('You have not been verified');
+        } else {
 
-        req.user = user;
-        logger.info("GET USER PIC - User authenticated succesfully.");
-        next();
+            req.user = user;
+            logger.info("GET USER PIC - User authenticated succesfully.");
+            next();
+        }
 
     }, (err) => {
         logger.info("GET USER PIC - There was an error.");
@@ -472,17 +522,27 @@ userRouter.route('/self/pic').post((req, res, next) => {
     }
 
     const credentials = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+    const givenUserName = credentials[0];
     userService.getUserByUserName(credentials[0]).then(async (user) => {
-        //console.log(user);
-
+        if (!user) {
+            logger.info("POST USER PIC - User does not exist");
+            throw 'Username "' + givenUserName + '" is does not exist';
+        }
         //verifying password
         if (!(await bcrypt.compare(credentials[1], user.dataValues.password))) {
             logger.info("DELETE USER PIC - Incorrect Password");
             throw ('you are not authorized');
         }
-        req.user = user;
-        logger.info("DELETE USER PIC - User successfully authenticated");
-        next();
+        //checking if user is isVerified
+        if (!user.isVerified) {
+            res.status(403);
+            res.send('You have not been verified');
+        } else {
+
+            req.user = user;
+            logger.info("DELETE USER PIC - User successfully authenticated");
+            next();
+        }
     }, (err) => {
         logger.info("DELETE USER PIC - There was an error");
         res.sendStatus(503)
