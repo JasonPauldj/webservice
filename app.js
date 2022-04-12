@@ -1,6 +1,5 @@
 
 const express = require('express');
-const { Logform } = require('winston');
 const userRouter = require('./user.controller');
 const userService = require('./user.service');
 const logger = require('./loggerConfig/winston');
@@ -32,7 +31,9 @@ app.use('/v1/verifyUserEmail', async (req, res)=>{
   const email=req.query.email;
 
    //Fetching item from DynamoDB
+   logger.info("Fetching item from DynamoDB");
    const tableName = process.env.DYNAMODB_TABLE_NAME;
+   logger.info("TableName " + tableName);
   //  const dynamoInputGetParams = {
   //      Key: {
   //          userId : {S:email}
@@ -53,6 +54,7 @@ app.use('/v1/verifyUserEmail', async (req, res)=>{
       },
       TableName : tableName
   }
+  logger.info(dynamoQueryInputParams);
    const dynamoCommand = new QueryCommand(dynamoQueryInputParams);
    try {
      // const dynamoResponse = await dynamodbClient.send(dynamoCommand);
@@ -73,7 +75,7 @@ app.use('/v1/verifyUserEmail', async (req, res)=>{
       //     userId: { S: 'jane24.doe@example.com' }
       //   }
       // }
-
+      
        const dynamoResponse = await dynamodbClient.send(dynamoCommand);
       //if couldn't find a record
        if(dynamoResponse && dynamoResponse.Count==0)
@@ -89,16 +91,14 @@ app.use('/v1/verifyUserEmail', async (req, res)=>{
             res.status(200);
             res.send('Successfully verified');
           }).catch((err)=>{
-            logger.error(err);
+            logger.error("there was an error when verifying user", err);
           })
       }
   }
   catch(err) {
-      console.log(err);
+      logger.error('there was error while querying the DB.',err);
       throw 'there was error while querying the DB.';
   }
-
-
 
 });
 
