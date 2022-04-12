@@ -1,4 +1,3 @@
-const config = require('./config.json');
 const bcrypt = require('bcryptjs');
 const db = require('./db');
 
@@ -54,8 +53,28 @@ async function updateUserByModelInstance(user,params){
    return await user.save();
 }
 
+/**
+ * Function to verify user
+ * @param {string} username - the username of the user
+ * @returns 
+ */
+async function verifyUserByUserName(username){
+    let user = await User.findOne({
+        where :{
+            username : username
+        }
+    });
+
+    user.set({
+        isVerified :true
+    })
+
+    return await user.save();
+}
+
 module.exports = {
     create,
     getUserByUserName,
-    updateUserByModelInstance
+    updateUserByModelInstance,
+    verifyUserByUserName
 }
