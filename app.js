@@ -26,7 +26,7 @@ app.use(express.json());
 //app.use(express.raw({limit: '50mb',type: ['image/*']}));
 
 //VERIFY USER
-app.use('/v1/verifyUserEmail', async (req, res)=>{
+app.use('/v2/verifyUserEmail', async (req, res)=>{
   const token=req.query.token;
   const email=req.query.email;
 
@@ -102,7 +102,7 @@ app.use('/v1/verifyUserEmail', async (req, res)=>{
 
 });
 
-app.use('/v1/user',userRouter);
+app.use('/v2/user',userRouter);
 
 app.get('/healthz', (req,res) => {
     res.sendStatus(200)
