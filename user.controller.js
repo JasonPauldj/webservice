@@ -19,7 +19,7 @@ const unlinkFile = util.promisify(fs.unlink);
 const logger = require('./loggerConfig/winston');
 const statsdclient = require('./loggerConfig/statsd-client');
 const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
-const { DynamoDBClient, PutItemCommand } = require("@aws-sdk/client-dynamodb");
+const { DynamoDBClient, PutItemCommand, GetItemCommand, QueryCommand } = require("@aws-sdk/client-dynamodb");
 const crypto = require('crypto');
 
 //for local machine
@@ -52,7 +52,7 @@ const bucketName = process.env.S3_BUCKETNAME;
 
 const userRouter = express.Router();
 
-
+//POST A NEW USER
 userRouter.route('/').
 post((req, res, next) => {
 
@@ -89,16 +89,12 @@ post((req, res, next) => {
             //Putting item in DynamoDB
             const token = crypto.randomBytes(64).toString('hex');
             const tableName = process.env.DYNAMODB_TABLE_NAME;
-            console.log("user in post",user);
-            console.log("token ", token);
             let currentTime = new Date().getTime();
             let ttl = Math.round(currentTime/1000) + 5 * 60 ;
-            console.log("user in post",user);
-            console.log("token ", token);
-            console.log("ttl",ttl);
+           // console.log("ttl",ttl);
             const dynamoInputParams = {
                 Item : {
-                    userId: {S: user.id},
+                    userId: {S: user.username},
                     token: {S: token},
                     ttl: {N: ttl.toString()}
                 },
@@ -108,7 +104,7 @@ post((req, res, next) => {
 
             try {
                 const dynamoResponse = await dynamodbClient.send(dynamoCommand);
-                console.log(dynamoResponse);
+                //console.log(dynamoResponse);
                 logger.info("Successfully put item in dynamoDB");
             }
             catch(err) {
@@ -157,6 +153,69 @@ post((req, res, next) => {
 
         })
     });
+
+//VERIFY USER
+userRouter.route('/verifyUserEmail').get(async (req, res)=>{
+    const token=req.query.token;
+    const email=req.query.email;
+
+     //Fetching item from DynamoDB
+     const tableName = process.env.DYNAMODB_TABLE_NAME;
+    //  const dynamoInputGetParams = {
+    //      Key: {
+    //          userId : {S:email}
+    //         },
+    //     TableName: tableName
+    //  }
+    // const dynamoCommand = new GetItemCommand(dynamoInputParams);
+    const currentTime = Math.round(new Date().getTime()/1000);
+    const dynamoQueryInputParams ={
+        KeyConditionExpression: "userId = :uId",
+        FilterExpression: "#ttl >= :curTime",
+        ExpressionAttributeValues:{
+            ":uId" : {S:email},
+            ":curTime" : {N:currentTime.toString()}
+        },
+        ExpressionAttributeNames:{
+            "#ttl" : "ttl"
+        },
+        TableName : tableName
+    }
+     const dynamoCommand = new QueryCommand(dynamoQueryInputParams);
+     try {
+       // const dynamoResponse = await dynamodbClient.send(dynamoCommand);
+        // '$metadata': {
+        //     httpStatusCode: 200,
+        //     requestId: 'RQGRQG66Q081EAP9T857HUU967VV4KQNSO5AEMVJF66Q9ASUAAJG',
+        //     extendedRequestId: undefined,
+        //     cfId: undefined,
+        //     attempts: 1,
+        //     totalRetryDelay: 0
+        //   },
+        //   ConsumedCapacity: undefined,
+        //   Item: {
+        //     ttl: { N: '1649740990' },
+        //     token: {
+        //       S: '53e67b93be677e00799663d13d1be2b87023dba7f88120312a31b013290fc032e3a47882720ade2b375aef0bf77e534d160a43332faa199c3594d099f020816f'
+        //     },
+        //     userId: { S: 'jane24.doe@example.com' }
+        //   }
+        // }
+
+         const dynamoResponse = await dynamodbClient.send(dynamoCommand);
+
+        console.log(dynamoResponse);
+
+        logger.info("Successfully queried item from dynamoDB");
+    }
+    catch(err) {
+        console.log(err);
+        throw 'the token has expired';
+    }
+
+    res.sendStatus(200);
+
+});
 
 userRouter.route('/self').put((req, res, next) => {
     statsdclient.increment('PUT.UPDATE.USER.COUNTER');
@@ -218,7 +277,7 @@ userRouter.route('/self').put((req, res, next) => {
         logger.info("PUT USER - User successfully updated.");
         res.sendStatus(204)
     }, (err) => {
-        logger.info("PUT USER - There was an error 503");
+        logger.error("PUT USER - There was an error 503");
         res.sendStatus(503)
     }).catch((err) => {
         logger.info("PUT USER - There was an error");
