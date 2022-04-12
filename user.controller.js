@@ -18,7 +18,31 @@ const {
 const unlinkFile = util.promisify(fs.unlink);
 const logger = require('./loggerConfig/winston');
 const statsdclient = require('./loggerConfig/statsd-client');
+const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
+const { DynamoDBClient, PutItemCommand } = require("@aws-sdk/client-dynamodb");
+const crypto = require('crypto');
 
+//for local machine
+// const {
+//     fromIni
+// } = require("@aws-sdk/credential-provider-ini");
+// const region = 'us-east-1';
+// const snsClient = new SNSClient({
+//     region,
+//     credentials: fromIni({
+//         profile: 'dev'
+//     })
+// });
+// const dynamodbClient = new DynamoDBClient({
+//     region,
+//     credentials: fromIni({
+//         profile: 'dev'
+//     })
+// });
+
+//for PROD
+const snsClient = new SNSClient();
+const dynamodbClient= new DynamoDBClient();
 
 const upload = multer({
     dest: 'uploads/'
@@ -27,6 +51,7 @@ const upload = multer({
 const bucketName = process.env.S3_BUCKETNAME;
 
 const userRouter = express.Router();
+
 
 userRouter.route('/').
 post((req, res, next) => {
@@ -49,16 +74,74 @@ post((req, res, next) => {
         }
     },
 
-    (req, res) => {
+     (req, res) => {
         req.body.account_created = new Date();
         req.body.account_updated = new Date();
-        userService.create(req.body).then((user) => {
+        req.body.isVerified=false;
+        userService.create(req.body).then(async (user) => {
 
-            //  console.log("User created successfully");
             logger.info("POST NEW USER - User created successfully");
             res.statusCode = 201;
             res.setHeader('Content-type', 'application/json');
             res.json(user);
+
+
+            //Putting item in DynamoDB
+            const token = crypto.randomBytes(64).toString('hex');
+            const tableName = process.env.DYNAMODB_TABLE_NAME;
+            console.log("user in post",user);
+            console.log("token ", token);
+            let currentTime = new Date().getTime();
+            let ttl = Math.round(currentTime/1000) + 5 * 60 ;
+            console.log("user in post",user);
+            console.log("token ", token);
+            console.log("ttl",ttl);
+            const dynamoInputParams = {
+                Item : {
+                    userId: {S: user.id},
+                    token: {S: token},
+                    ttl: {N: ttl.toString()}
+                },
+                TableName: tableName
+            }
+            const dynamoCommand = new PutItemCommand(dynamoInputParams);
+
+            try {
+                const dynamoResponse = await dynamodbClient.send(dynamoCommand);
+                console.log(dynamoResponse);
+                logger.info("Successfully put item in dynamoDB");
+            }
+            catch(err) {
+                console.log(err);
+                throw err;
+            }
+
+            //Publishing message to SNS
+            const TopicArn = process.env.SNS_TOPIC_ARN;
+            const inputParams ={
+                MessageStructure: "json",
+                Message:JSON.stringify({
+                    lambda : JSON.stringify({
+                        username : req.body.username,
+                        token: token
+                    }),
+                    default : JSON.stringify({
+                        username : req.body.username,
+                        token: token
+                    })
+                }),
+                TopicArn: TopicArn
+            }
+            const command = new PublishCommand(inputParams);
+            try{
+             const response = await snsClient.send(command);
+             logger.info("Successfully published data to SNS");
+            }
+            catch(err) {
+                console.log(err);
+                throw err;
+            }
+
 
         }, (err) => {
             if (err === 'Username is already taken') {
@@ -440,8 +523,6 @@ userRouter.route('/self/pic').post((req, res, next) => {
         res.sendStatus(404);
     }
 })
-
-
 
 
 module.exports = userRouter;

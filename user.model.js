@@ -11,7 +11,8 @@ function model(sequelize) {
         username: { type: DataTypes.STRING, allowNull: false },
         account_created : {type: DataTypes.DATE,allowNull:true},
         account_updated : {type: DataTypes.DATE,allowNull:true},
-        id : {type : DataTypes.UUID,defaultValue:Sequelize.UUIDV4,allowNull:false,primaryKey:true}
+        id : {type : DataTypes.UUID,defaultValue:Sequelize.UUIDV4,allowNull:false,primaryKey:true},
+        isVerified: {type: DataTypes.BOOLEAN, defaultValue:false, allowNull:true}
     };
 
     const options = {

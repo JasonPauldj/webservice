@@ -10,14 +10,7 @@ const {
 // const {
 //     fromIni
 // } = require("@aws-sdk/credential-provider-ini");
-
-
-const fs = require('fs');
-
 // const region = 'us-east-1';
-const bucketName = process.env.S3_BUCKETNAME;
-
-//required for local machine
 // const s3 = new S3Client({
 //     region,
 //     credentials: fromIni({
@@ -25,6 +18,12 @@ const bucketName = process.env.S3_BUCKETNAME;
 //     })
 // });
 
+const fs = require('fs');
+
+ 
+
+//for PORD
+const bucketName = process.env.S3_BUCKETNAME;
 const s3 = new S3Client();
 
 
