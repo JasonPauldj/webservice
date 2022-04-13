@@ -275,7 +275,6 @@ get((req, res) => {
 
         //verifying password
         if (!(await bcrypt.compare(credentials[1], user.dataValues.password))) {
-            // console.log("password incorrect");
             logger.info("GET USER - Incorrect Password ");
             throw ('you are not authorized');
         }
