@@ -292,6 +292,7 @@ get((req, res) => {
                 file_name,
                 file_id,
                 upload_date,
+                isVerified,
                 ...userInfo
             } = user.dataValues;
             logger.info("GET USER - User successfully authenticated");
