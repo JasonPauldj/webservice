@@ -30,7 +30,7 @@ app.use('/v1/verifyUserEmail', async (req, res) => {
   const email = req.query.email;
 
 
-  userService.getUserByUserName(email).then((user) => {
+  userService.getUserByUserName(email).then(async (user) => {
 
     //if user doesn't exist
     if (!user) {
