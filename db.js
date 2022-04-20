@@ -51,11 +51,11 @@ async function initialize() {
         port: port,
         dialect: 'mysql',
         dialectOptions: {
-            // ssl: 'Amazon RDS'
-            ssl : {
-                rejectUnauthorized: true,
-                ca: [rdsCa]
-            }
+             ssl: 'Amazon RDS'
+            // ssl : {
+            //     rejectUnauthorized: true,
+            //     ca: [rdsCa]
+            // }
         }
     });
 
