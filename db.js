@@ -13,6 +13,10 @@ const dbconfig = {
     database: process.env.MYSQL_DATABASE
 }
 
+const fs = require('fs');
+const rdsCa = fs.readFileSync('./global-bundle.pem');
+
+
 module.exports = db = {};
 
 initialize().then(() => console.log("database connection successfully established.")).catch((e) => console.log("error while establishing connection to DB " + e));
@@ -47,7 +51,11 @@ async function initialize() {
         port: port,
         dialect: 'mysql',
         dialectOptions: {
-            ssl: 'Amazon RDS'
+            // ssl: 'Amazon RDS'
+            ssl : {
+                rejectUnauthorized: true,
+                ca: [rdsCa]
+            }
         }
     });
 
