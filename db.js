@@ -14,7 +14,7 @@ const dbconfig = {
 }
 
 const fs = require('fs');
-const rdsCa = fs.readFileSync('./global-bundle.pem');
+const rdsCa = fs.readFileSync('./us-east-1-bundle.pem');
 
 
 module.exports = db = {};
@@ -51,11 +51,11 @@ async function initialize() {
         port: port,
         dialect: 'mysql',
         dialectOptions: {
-             ssl: 'Amazon RDS'
-            // ssl : {
-            //     rejectUnauthorized: true,
-            //     ca: [rdsCa]
-            // }
+            // ssl: 'Amazon RDS'
+            ssl : {
+                rejectUnauthorized: true,
+                ca: [rdsCa]
+            }
         }
     });
 
