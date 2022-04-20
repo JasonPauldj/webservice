@@ -120,7 +120,8 @@ post((req, res, next) => {
                 //console.log(dynamoResponse);
                 logger.info("Successfully put item in dynamoDB");
             } catch (err) {
-                console.log(err);
+                logger.error("POST NEW USER - Error while putting item in dynamoDB");
+                logger.error(err);
                 throw err;
             }
 
@@ -145,7 +146,8 @@ post((req, res, next) => {
                 const response = await snsClient.send(command);
                 logger.info("Successfully published data to SNS");
             } catch (err) {
-                console.log(err);
+                logger.error("POST NEW USER - Error while publishing SNS message");
+                logger.error(err);
                 throw err;
             }
 
@@ -155,10 +157,13 @@ post((req, res, next) => {
                 logger.info("POST NEW USER - Username is already taken.");
                 res.sendStatus(400);
 
-            } else res.sendStatus(503)
+            } else {
+                logger.error("POST NEW USER - error while trying to create user in DB");
+                res.sendStatus(503)
+            }
         }).catch(err => {
             logger.error("POST NEW USER - Error while creating new user.");
-            // console.log("error while creating object " + err);
+            logger.error(err);
             res.sendStatus(400);
 
         })
@@ -225,6 +230,7 @@ userRouter.route('/self').put((req, res, next) => {
             next();
         }
     }, (err) => {
+        logger.error("PUT USER - error while fetching user during authorization.")
         res.sendStatus(503)
     }).catch(err => {
         res.setHeader('WWW-Authenticate', 'Basic');
@@ -244,7 +250,7 @@ userRouter.route('/self').put((req, res, next) => {
         logger.error("PUT USER - There was an error 503");
         res.sendStatus(503)
     }).catch((err) => {
-        logger.info("PUT USER - There was an error");
+        logger.info("PUT USER - There was an error while updating the user");
         //console.log("error in put " + err);
     })
 
@@ -300,7 +306,7 @@ get((req, res) => {
             res.json(userInfo);
         }
     }, (err) => {
-        logger.info("GET USER - There was an error 503 ");
+        logger.info("GET USER - There was an error while fetching the user from the DB during verification");
         res.sendStatus(503)
     }).catch(err => {
         res.setHeader('WWW-Authenticate', 'Basic');
@@ -361,10 +367,10 @@ userRouter.route('/self/pic').post((req, res, next) => {
             next();
         }
     }, (err) => {
-        logger.info("POST USER PIC - There was an error");
+        logger.error("POST USER PIC - There was an error while fetching user from DB for verification");
         res.sendStatus(503)
     }).catch(err => {
-        logger.info("POST USER PIC - There was an error");
+        logger.error("POST USER PIC - There was an error");
         res.setHeader('WWW-Authenticate', 'Basic');
         res.sendStatus(401);
     })
@@ -473,7 +479,7 @@ userRouter.route('/self/pic').post((req, res, next) => {
         }
 
     }, (err) => {
-        logger.info("GET USER PIC - There was an error.");
+        logger.info("GET USER PIC - There was an error when fetching user from db for authorization.");
         res.sendStatus(503)
     }).catch(err => {
         res.setHeader('WWW-Authenticate', 'Basic');
@@ -547,6 +553,7 @@ userRouter.route('/self/pic').post((req, res, next) => {
         logger.info("DELETE USER PIC - There was an error");
         res.sendStatus(503)
     }).catch(err => {
+        logger.error("DELETE USER PIC - Error while fetching item from DB for authorization");
         res.setHeader('WWW-Authenticate', 'Basic');
         res.sendStatus(401);
     })
@@ -565,6 +572,7 @@ userRouter.route('/self/pic').post((req, res, next) => {
         try {
             const result = await getFile(key);
         } catch (err) {
+            logger.error("DELETE  PIC - Error while getting pic from S3");
             res.sendStatus(404);
         }
 
